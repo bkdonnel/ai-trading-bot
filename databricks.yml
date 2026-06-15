@@ -9,14 +9,17 @@ bundle:
 variables:
   catalog:
     description: Unity Catalog catalog name
-    default: trading
+    default: bootcamp_students
+  schema:
+    description: Schema within the catalog
+    default: trading_bd
 
 resources:
   pipelines:
     dlt_ingestion:
       name: trading-ingestion-pipeline
       catalog: ${var.catalog}
-      schema: public
+      schema: ${var.schema}
       channel: CURRENT
       libraries:
         - notebook:
