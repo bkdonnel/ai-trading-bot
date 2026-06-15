@@ -1,3 +1,21 @@
+# Project Context
+
+## Environment
+- **Databricks workspace:** `https://dbc-7b106152-caf3.cloud.databricks.com` (AWS)
+- **Cluster:** DataExpert All Purpose
+- **Catalog:** `bootcamp_students`
+- **Schema:** `trading_bd`
+- **Full table path:** `bootcamp_students.trading_bd.<table>`
+- **Secrets scope:** `trading_bd`
+- **Deployment:** Git Folders — push to GitHub, then manually pull in Databricks UI
+
+## Secrets
+All API keys are stored in the Databricks secrets scope `trading_bd`.
+Read them via `src/data/config.py` — never hardcode keys in any file.
+Locally, set the corresponding environment variable (e.g. `POLYGON_API_KEY`).
+
+---
+
 # Coding Standards & Conventions
 
 ## General Python

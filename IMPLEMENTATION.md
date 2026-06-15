@@ -653,8 +653,12 @@ When going live: start at 10% of intended capital, run paper and live in paralle
 Build and validate each phase before moving to the next.
 
 ### Phase 1 — Databricks Foundation + Data Pipeline
-- [ ] Set up Unity Catalog with `trading` catalog and Delta table schemas
-- [ ] Alpaca account (paper mode) + Polygon.io account
+- [x] Set up `trading_bd` schema and all six Delta tables in `bootcamp_students`
+- [x] GitHub repo created: https://github.com/bkdonnel/ai-trading-bot
+- [x] CI pipeline: gitleaks secret scan + lint + type check + tests
+- [x] Git Folders connected in Databricks for deployment
+- [x] Centralized secrets management via `src/data/config.py`
+- [ ] API accounts set up + keys added to Databricks secrets scope `trading_bd`
 - [ ] Delta Live Tables pipeline: bars, news, fundamentals ingestion
 - [ ] Deploy FinBERT as Databricks Model Serving endpoint
 - [ ] DLT scores news sentiment via FinBERT endpoint at ingest
@@ -665,7 +669,7 @@ Build and validate each phase before moving to the next.
 - [ ] Feature Store setup for quant indicators
 - [ ] Tier 2 screen (Spark, parallel across full universe)
 - [ ] Tier 3 event triggers (earnings surprises, volume spikes, 8-K RSS)
-- [ ] Signal logging to `trading.decisions` Delta table
+- [ ] Signal logging to `bootcamp_students.trading_bd.decisions` Delta table
 
 ### Phase 3 — LLM Reasoning Layer
 - [ ] Anthropic SDK integration
