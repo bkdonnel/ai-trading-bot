@@ -1,0 +1,80 @@
+bundle:
+  name: ai-trading-bot
+
+variables:
+  databricks_host:
+    description: Databricks workspace URL
+  catalog:
+    description: Unity Catalog catalog name
+    default: trading
+
+targets:
+  dev:
+    workspace:
+      host: ${var.databricks_host}
+    default: true
+    variables:
+      catalog: trading_dev
+
+  prod:
+    workspace:
+      host: ${var.databricks_host}
+    variables:
+      catalog: trading
+
+resources:
+  pipelines:
+    dlt_ingestion:
+      name: trading-ingestion-pipeline-${bundle.target}
+      catalog: ${var.catalog}
+      schema: public
+      channel: CURRENT
+      libraries:
+        - notebook:
+            path: ./pipelines/dlt_ingestion.py
+
+  jobs:
+    nightly_pipeline:
+      name: trading-nightly-pipeline-${bundle.target}
+      schedule:
+        quartz_cron_expression: "0 0 23 * * ?"
+        timezone_id: America/New_York
+      tasks:
+        - task_key: refresh_dlt_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.dlt_ingestion.id}
+        - task_key: update_feature_store
+          depends_on:
+            - task_key: refresh_dlt_pipeline
+          notebook_task:
+            notebook_path: ./jobs/update_feature_store.py
+        - task_key: run_tier2_screen
+          depends_on:
+            - task_key: update_feature_store
+          notebook_task:
+            notebook_path: ./jobs/tier2_screen.py
+        - task_key: run_tier3_triggers
+          depends_on:
+            - task_key: refresh_dlt_pipeline
+          notebook_task:
+            notebook_path: ./jobs/tier3_triggers.py
+
+    decision_loop:
+      name: trading-decision-loop-${bundle.target}
+      schedule:
+        quartz_cron_expression: "0 45 9 * * MON-FRI"
+        timezone_id: America/New_York
+      tasks:
+        - task_key: build_context_cache
+          notebook_task:
+            notebook_path: ./jobs/build_context_cache.py
+        - task_key: run_quant_signals
+          depends_on:
+            - task_key: build_context_cache
+          notebook_task:
+            notebook_path: ./jobs/run_quant_signals.py
+        - task_key: invoke_llm_and_execute
+          depends_on:
+            - task_key: run_quant_signals
+          notebook_task:
+            notebook_path: ./jobs/decision_loop.py
