@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   pull_request:
@@ -29,37 +29,3 @@ jobs:
 
       - name: Test
         run: pytest tests/ --cov=src --cov-report=xml
-
-  deploy-dev:
-    name: Deploy to dev
-    needs: test
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: databricks/setup-cli@main
-
-      - name: Deploy bundle to dev
-        run: databricks bundle deploy --target dev
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-
-  deploy-prod:
-    name: Deploy to prod
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: prod
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: databricks/setup-cli@main
-
-      - name: Deploy bundle to prod
-        run: databricks bundle deploy --target prod
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

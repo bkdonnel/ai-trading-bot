@@ -1,31 +1,20 @@
 bundle:
   name: ai-trading-bot
 
+# Code is synced to Databricks via Git Folders (Workspace → Git folder).
+# Databricks Workflows reference notebooks directly from the connected
+# GitHub repo (bkdonnel/ai-trading-bot), always running the latest main branch.
+# No deploy step needed in CI — merging to main is the deployment.
+
 variables:
-  databricks_host:
-    description: Databricks workspace URL
   catalog:
     description: Unity Catalog catalog name
     default: trading
 
-targets:
-  dev:
-    workspace:
-      host: ${var.databricks_host}
-    default: true
-    variables:
-      catalog: trading_dev
-
-  prod:
-    workspace:
-      host: ${var.databricks_host}
-    variables:
-      catalog: trading
-
 resources:
   pipelines:
     dlt_ingestion:
-      name: trading-ingestion-pipeline-${bundle.target}
+      name: trading-ingestion-pipeline
       catalog: ${var.catalog}
       schema: public
       channel: CURRENT
@@ -35,7 +24,7 @@ resources:
 
   jobs:
     nightly_pipeline:
-      name: trading-nightly-pipeline-${bundle.target}
+      name: trading-nightly-pipeline
       schedule:
         quartz_cron_expression: "0 0 23 * * ?"
         timezone_id: America/New_York
@@ -60,7 +49,7 @@ resources:
             notebook_path: ./jobs/tier3_triggers.py
 
     decision_loop:
-      name: trading-decision-loop-${bundle.target}
+      name: trading-decision-loop
       schedule:
         quartz_cron_expression: "0 45 9 * * MON-FRI"
         timezone_id: America/New_York
