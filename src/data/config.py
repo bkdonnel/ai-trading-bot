@@ -8,7 +8,7 @@ SCHEMA = "trading_bd"
 def get_secret(key: str) -> str:
     try:
         from databricks.sdk.runtime import dbutils
-        return dbutils.secrets.get(scope="trading_bd", key=key)
+        return str(dbutils.secrets.get(scope="trading_bd", key=key))
     except (ImportError, Exception):
         pass
 

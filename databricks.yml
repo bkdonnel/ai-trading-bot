@@ -32,7 +32,12 @@ resources:
         quartz_cron_expression: "0 0 23 * * ?"
         timezone_id: America/New_York
       tasks:
+        - task_key: fetch_market_data
+          notebook_task:
+            notebook_path: ./jobs/fetch_market_data.py
         - task_key: refresh_dlt_pipeline
+          depends_on:
+            - task_key: fetch_market_data
           pipeline_task:
             pipeline_id: ${resources.pipelines.dlt_ingestion.id}
         - task_key: update_feature_store
