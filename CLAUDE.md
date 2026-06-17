@@ -14,6 +14,26 @@ All API keys are stored in the Databricks secrets scope `trading_bd`.
 Read them via `src/data/config.py` — never hardcode keys in any file.
 Locally, set the corresponding environment variable (e.g. `POLYGON_API_KEY`).
 
+Current secrets in scope:
+- `alpaca_api_key` / `alpaca_secret_key` — Alpaca paper trading
+- `polygon_api_key` — Polygon.io market data + news
+- `anthropic_api_key` — Claude (used in Phase 3)
+- `fmp_api_key` — Financial Modeling Prep fundamentals (key currently invalid — needs fixing)
+
+## File Storage
+This workspace has Unity Catalog enabled with DBFS access restricted.
+Use Unity Catalog Volumes for all file I/O — never `dbfs:/` paths.
+- Landing zone: `/Volumes/bootcamp_students/trading_bd/landing/`
+- Checkpoints: `/Volumes/bootcamp_students/trading_bd/checkpoints/`
+Use Python `open()` and `os.makedirs()` for Volume file operations — not `dbutils.fs`.
+
+## Notebook Imports
+Databricks notebooks need this at the top to import from `src/`:
+```python
+import sys
+sys.path.insert(0, "/Workspace/Repos/bkdonnel/ai-trading-bot")
+```
+
 ---
 
 # Coding Standards & Conventions

@@ -658,11 +658,21 @@ Build and validate each phase before moving to the next.
 - [x] CI pipeline: gitleaks secret scan + lint + type check + tests
 - [x] Git Folders connected in Databricks for deployment
 - [x] Centralized secrets management via `src/data/config.py`
-- [ ] API accounts set up + keys added to Databricks secrets scope `trading_bd`
-- [ ] Delta Live Tables pipeline: bars, news, fundamentals ingestion
+- [x] API accounts set up + keys added to Databricks secrets scope `trading_bd`
+  - alpaca_api_key, alpaca_secret_key, polygon_api_key, anthropic_api_key added
+  - fmp_api_key added but currently returning 401 — key needs to be fixed
+- [x] Data fetchers: `src/data/fetchers/polygon.py` (bars + news), `src/data/fetchers/fmp.py`
+- [x] Technical indicators: `src/data/indicators.py` (RSI-14, MACD, ATR-14, vol_ratio_20d via `ta` library + applyInPandas)
+- [x] Nightly fetch job: `jobs/fetch_market_data.py` — writes NDJSON to UC Volumes landing zone
+- [x] Delta Live Tables pipeline: `pipelines/dlt_ingestion.py` — Auto Loader → bronze → silver for bars, news, fundamentals
+- [x] UC Volumes created for landing zone and checkpoints (`bootcamp_students.trading_bd.landing/checkpoints`)
+- [x] `databricks.yml` updated: `fetch_market_data` task runs before DLT pipeline refresh
+- [x] Initial backfill run: bars and news loaded successfully (lookback_days=90); fundamentals skipped (FMP key issue)
+- [ ] Fix FMP API key — fundamentals fetch returning 401
+- [ ] Run DLT pipeline for first time to populate Delta tables from landing zone
 - [ ] Deploy FinBERT as Databricks Model Serving endpoint
 - [ ] DLT scores news sentiment via FinBERT endpoint at ingest
-- [ ] Databricks Workflow: nightly pipeline job
+- [ ] Validate end-to-end nightly Workflow run
 
 ### Phase 2 — Quant Signal Layer
 - [ ] RSI, MACD, ATR, volume ratio computed in DLT and stored in Delta
