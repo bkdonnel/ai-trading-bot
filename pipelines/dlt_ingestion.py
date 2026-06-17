@@ -28,12 +28,12 @@ from src.data.indicators import add_indicators
 # COMMAND ----------
 # Landing zone paths (must match jobs/fetch_market_data.py)
 
-BARS_LANDING  = "dbfs:/trading/landing/bars"
-NEWS_LANDING  = "dbfs:/trading/landing/news"
-FUNDS_LANDING = "dbfs:/trading/landing/fundamentals"
+BARS_LANDING  = "/Volumes/bootcamp_students/trading_bd/landing/bars"
+NEWS_LANDING  = "/Volumes/bootcamp_students/trading_bd/landing/news"
+FUNDS_LANDING = "/Volumes/bootcamp_students/trading_bd/landing/fundamentals"
 
 # Schema checkpoints let Auto Loader evolve the schema without reprocessing
-CHECKPOINT_BASE = "dbfs:/trading/_checkpoints"
+CHECKPOINT_BASE = "/Volumes/bootcamp_students/trading_bd/checkpoints"
 
 # COMMAND ----------
 # ── PRICE BARS ──────────────────────────────────────────────────────────────

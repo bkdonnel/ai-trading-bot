@@ -10,6 +10,7 @@
 # COMMAND ----------
 
 import json
+import os
 import sys
 from datetime import date, timedelta
 
@@ -32,9 +33,9 @@ TIER1_WATCHLIST: list[str] = [
     "XOM", "CVX",
 ]
 
-BARS_LANDING  = "dbfs:/trading/landing/bars"
-NEWS_LANDING  = "dbfs:/trading/landing/news"
-FUNDS_LANDING = "dbfs:/trading/landing/fundamentals"
+BARS_LANDING  = "/Volumes/bootcamp_students/trading_bd/landing/bars"
+NEWS_LANDING  = "/Volumes/bootcamp_students/trading_bd/landing/news"
+FUNDS_LANDING = "/Volumes/bootcamp_students/trading_bd/landing/fundamentals"
 
 POLYGON_KEY = get_polygon_api_key()
 FMP_KEY     = get_fmp_api_key()
@@ -43,10 +44,10 @@ today     = date.today()
 run_label = today.strftime("%Y%m%d")
 
 # COMMAND ----------
-# Ensure landing directories exist
+# Ensure landing subdirectories exist (Volume root created via SQL before first run)
 
 for path in (BARS_LANDING, NEWS_LANDING, FUNDS_LANDING):
-    dbutils.fs.mkdirs(path)
+    os.makedirs(path, exist_ok=True)
 
 # COMMAND ----------
 # Fetch EOD bars
@@ -60,7 +61,8 @@ for ticker in TIER1_WATCHLIST:
         bars = fetch_bars(ticker, bars_from, bars_to, POLYGON_KEY)
         if bars:
             ndjson = "\n".join(json.dumps(r) for r in bars)
-            dbutils.fs.put(f"{BARS_LANDING}/{ticker}_{run_label}.jsonl", ndjson, overwrite=True)
+            with open(f"{BARS_LANDING}/{ticker}_{run_label}.jsonl", "w") as f:
+                f.write(ndjson)
             bars_fetched += len(bars)
             print(f"  bars: {ticker} — {len(bars)} rows")
     except Exception as exc:
@@ -79,7 +81,8 @@ for ticker in TIER1_WATCHLIST:
         articles = fetch_news(ticker, news_from, POLYGON_KEY)
         if articles:
             ndjson = "\n".join(json.dumps(a) for a in articles)
-            dbutils.fs.put(f"{NEWS_LANDING}/{ticker}_{run_label}.jsonl", ndjson, overwrite=True)
+            with open(f"{NEWS_LANDING}/{ticker}_{run_label}.jsonl", "w") as f:
+                f.write(ndjson)
             news_fetched += len(articles)
             print(f"  news: {ticker} — {len(articles)} articles")
     except Exception as exc:
@@ -98,7 +101,8 @@ for ticker in TIER1_WATCHLIST:
         rows = fetch_fundamentals(ticker, FMP_KEY)
         if rows:
             ndjson = "\n".join(json.dumps(r) for r in rows)
-            dbutils.fs.put(f"{FUNDS_LANDING}/{ticker}_{run_label}.jsonl", ndjson, overwrite=True)
+            with open(f"{FUNDS_LANDING}/{ticker}_{run_label}.jsonl", "w") as f:
+                f.write(ndjson)
             funds_fetched += len(rows)
             print(f"  fundamentals: {ticker} — {len(rows)} periods")
     except Exception as exc:
