@@ -15,15 +15,30 @@
 
 # COMMAND ----------
 
-import sys
-
-sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
-
 import dlt
 import pandas as pd
 from pyspark.sql import functions as F
 
-from src.data.indicators import add_indicators
+_INDICATORS_SCHEMA = (
+    "ticker STRING, date DATE, open DOUBLE, high DOUBLE, low DOUBLE, "
+    "close DOUBLE, volume LONG, rsi_14 DOUBLE, macd DOUBLE, atr_14 DOUBLE, vol_ratio_20d DOUBLE"
+)
+
+
+def _compute_indicators(pdf: pd.DataFrame) -> pd.DataFrame:
+    from ta.momentum import RSIIndicator
+    from ta.trend import MACD
+    from ta.volatility import AverageTrueRange
+
+    pdf = pdf.sort_values("date").copy()
+    close = pdf["close"]
+    pdf["rsi_14"] = RSIIndicator(close=close, window=14).rsi()
+    pdf["macd"] = MACD(close=close, window_slow=26, window_fast=12, window_sign=9).macd()
+    pdf["atr_14"] = AverageTrueRange(high=pdf["high"], low=pdf["low"], close=close, window=14).average_true_range()
+    volume = pdf["volume"].astype(float)
+    pdf["vol_ratio_20d"] = volume / volume.rolling(20, min_periods=1).mean()
+    return pdf[["ticker", "date", "open", "high", "low", "close", "volume",
+                "rsi_14", "macd", "atr_14", "vol_ratio_20d"]]
 
 # COMMAND ----------
 # Landing zone paths (must match jobs/fetch_market_data.py)
@@ -71,7 +86,7 @@ def price_bars():
     # Batch read so add_indicators sees full history per ticker
     # (streaming would only get the micro-batch, breaking rolling windows)
     raw = dlt.read("raw_price_bars").dropDuplicates(["ticker", "date"])
-    return add_indicators(raw)
+    return raw.groupby("ticker").applyInPandas(_compute_indicators, schema=_INDICATORS_SCHEMA)
 
 
 # COMMAND ----------
