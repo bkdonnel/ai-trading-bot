@@ -8,6 +8,7 @@
 - **Full table path:** `bootcamp_students.trading_bd.<table>`
 - **Secrets scope:** `trading_bd`
 - **Deployment:** Git Folders — push to GitHub, then manually pull in Databricks UI
+- **Git Folder path:** `/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot/` (under Users, not Repos)
 
 ## Secrets
 All API keys are stored in the Databricks secrets scope `trading_bd`.
@@ -18,7 +19,7 @@ Current secrets in scope:
 - `alpaca_api_key` / `alpaca_secret_key` — Alpaca paper trading
 - `polygon_api_key` — Polygon.io market data + news
 - `anthropic_api_key` — Claude (used in Phase 3)
-- `fmp_api_key` — Financial Modeling Prep fundamentals (key currently invalid — needs fixing)
+- `fmp_api_key` — Financial Modeling Prep fundamentals (key is valid but free tier does not cover the endpoints we need — upgrade to Starter plan before Phase 3)
 
 ## File Storage
 This workspace has Unity Catalog enabled with DBFS access restricted.
@@ -31,8 +32,11 @@ Use Python `open()` and `os.makedirs()` for Volume file operations — not `dbut
 Databricks notebooks need this at the top to import from `src/`:
 ```python
 import sys
-sys.path.insert(0, "/Workspace/Repos/bkdonnel/ai-trading-bot")
+sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 ```
+
+## DLT Pipelines
+Do not import from `src/` inside `applyInPandas` UDFs in DLT pipelines. Worker nodes cannot resolve the `src` module via `sys.path` — only the driver node can. Define any pandas UDF functions inline in the pipeline notebook instead. The `sys.path.insert` is only needed if the driver itself needs to import from `src/`.
 
 ---
 

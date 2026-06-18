@@ -656,23 +656,24 @@ Build and validate each phase before moving to the next.
 - [x] Set up `trading_bd` schema and all six Delta tables in `bootcamp_students`
 - [x] GitHub repo created: https://github.com/bkdonnel/ai-trading-bot
 - [x] CI pipeline: gitleaks secret scan + lint + type check + tests
-- [x] Git Folders connected in Databricks for deployment
+- [x] Git Folders connected in Databricks for deployment (path: `/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot/`)
 - [x] Centralized secrets management via `src/data/config.py`
 - [x] API accounts set up + keys added to Databricks secrets scope `trading_bd`
-  - alpaca_api_key, alpaca_secret_key, polygon_api_key, anthropic_api_key added
-  - fmp_api_key added but currently returning 401 — key needs to be fixed
+  - alpaca_api_key, alpaca_secret_key, polygon_api_key, anthropic_api_key, fmp_api_key added
+  - fmp_api_key is valid but free tier does not cover required endpoints — upgrade to Starter plan before Phase 3
 - [x] Data fetchers: `src/data/fetchers/polygon.py` (bars + news), `src/data/fetchers/fmp.py`
 - [x] Technical indicators: `src/data/indicators.py` (RSI-14, MACD, ATR-14, vol_ratio_20d via `ta` library + applyInPandas)
 - [x] Nightly fetch job: `jobs/fetch_market_data.py` — writes NDJSON to UC Volumes landing zone
 - [x] Delta Live Tables pipeline: `pipelines/dlt_ingestion.py` — Auto Loader → bronze → silver for bars, news, fundamentals
 - [x] UC Volumes created for landing zone and checkpoints (`bootcamp_students.trading_bd.landing/checkpoints`)
 - [x] `databricks.yml` updated: `fetch_market_data` task runs before DLT pipeline refresh
-- [x] Initial backfill run: bars and news loaded successfully (lookback_days=90); fundamentals skipped (FMP key issue)
-- [ ] Fix FMP API key — fundamentals fetch returning 401
-- [ ] Run DLT pipeline for first time to populate Delta tables from landing zone
+- [x] Initial backfill run: bars and news loaded successfully (lookback_days=90); fundamentals skipped (FMP plan limitation)
+- [x] DLT pipeline run successfully: `price_bars` and `news` tables populated; `fundamentals` empty (expected)
+  - Indicator UDFs inlined in `dlt_ingestion.py` — do not import from `src/` in applyInPandas (worker nodes cannot resolve it)
+  - `ta` library installed via `%pip install ta` in first notebook cell
 - [ ] Deploy FinBERT as Databricks Model Serving endpoint
 - [ ] DLT scores news sentiment via FinBERT endpoint at ingest
-- [ ] Validate end-to-end nightly Workflow run
+- [ ] Validate end-to-end nightly Workflow run (low priority — not a blocker for Phase 2)
 
 ### Phase 2 — Quant Signal Layer
 - [ ] RSI, MACD, ATR, volume ratio computed in DLT and stored in Delta
