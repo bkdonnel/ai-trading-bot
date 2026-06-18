@@ -17,7 +17,7 @@
 
 import sys
 
-sys.path.insert(0, "/Workspace/Repos/bkdonnel/ai-trading-bot")
+sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 
 import dlt
 import pandas as pd
