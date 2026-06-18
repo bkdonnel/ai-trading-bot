@@ -1,4 +1,10 @@
 # Databricks notebook source
+
+# COMMAND ----------
+
+%pip install ta
+
+# COMMAND ----------
 # DLT ingestion pipeline — reads NDJSON files from DBFS landing zones
 # written by jobs/fetch_market_data.py and produces cleaned, validated
 # Delta tables in bootcamp_students.trading_bd.
@@ -12,10 +18,6 @@
 #   DROP TABLE IF EXISTS bootcamp_students.trading_bd.news;
 #   DROP TABLE IF EXISTS bootcamp_students.trading_bd.fundamentals;
 # DLT will recreate them with identical schemas under its management.
-
-# COMMAND ----------
-
-%pip install ta
 
 # COMMAND ----------
 
