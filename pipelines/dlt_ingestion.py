@@ -1,7 +1,4 @@
 # Databricks notebook source
-
-# COMMAND ----------
-
 %pip install ta
 
 # COMMAND ----------
