@@ -15,6 +15,10 @@
 
 # COMMAND ----------
 
+%pip install ta
+
+# COMMAND ----------
+
 import dlt
 import pandas as pd
 from pyspark.sql import functions as F
