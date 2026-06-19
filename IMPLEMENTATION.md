@@ -676,11 +676,17 @@ Build and validate each phase before moving to the next.
 - [ ] Validate end-to-end nightly Workflow run (low priority — not a blocker for Phase 2)
 
 ### Phase 2 — Quant Signal Layer
-- [ ] RSI, MACD, ATR, volume ratio computed in DLT and stored in Delta
-- [ ] Feature Store setup for quant indicators
-- [ ] Tier 2 screen (Spark, parallel across full universe)
-- [ ] Tier 3 event triggers (earnings surprises, volume spikes, 8-K RSS)
-- [ ] Signal logging to `bootcamp_students.trading_bd.decisions` Delta table
+- [x] RSI, MACD, ATR, volume ratio computed in DLT and stored in Delta
+- [x] Feature Store setup for quant indicators (`jobs/update_feature_store.py`)
+- [x] Tier 2 screen (`jobs/tier2_screen.py`) — Spark SQL parallel screen, writes to candidates table
+  - Market cap filter omitted until FMP Starter plan active
+  - `TIER2_UNIVERSE` (~80 additional S&P 500 tickers) added to `jobs/fetch_market_data.py`
+- [x] Tier 3 event triggers (`jobs/tier3_triggers.py`) — volume spikes (3x avg) + SEC 8-K RSS
+  - Earnings surprises deferred (needs FMP Starter)
+- [x] Quant signal logic (`src/signals/quant.py`) — RSI/MACD/volume signal with HIGH/LOW confidence tiers
+- [x] Signal logging to `bootcamp_students.trading_bd.decisions` Delta table
+  - `jobs/build_context_cache.py` — batch context pull at 9:45am (Tier 1 + candidates)
+  - `jobs/run_quant_signals.py` — applies quant signal, writes PENDING decisions (LLM fields null until Phase 3)
 
 ### Phase 3 — LLM Reasoning Layer
 - [ ] Anthropic SDK integration

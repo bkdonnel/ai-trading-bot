@@ -14,7 +14,7 @@ import os
 import sys
 from datetime import date, timedelta
 
-sys.path.insert(0, "/Workspace/Repos/bkdonnel/ai-trading-bot")
+sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 
 from src.data.config import get_polygon_api_key, get_fmp_api_key
 from src.data.fetchers.polygon import fetch_bars, fetch_news
@@ -31,6 +31,35 @@ TIER1_WATCHLIST: list[str] = [
     "UNH", "LLY", "JNJ", "ABBV",
     "JPM", "V", "MA", "GS",
     "XOM", "CVX",
+]
+
+# Broader universe for Tier 2 nightly screening.
+# Bars are fetched for these tickers so the Tier 2 screener has data to work with.
+# News is NOT fetched for this universe (only Tier 1) to stay within API call budgets.
+TIER2_UNIVERSE: list[str] = [
+    # Technology
+    "AVGO", "QCOM", "INTC", "AMD", "MU", "AMAT", "LRCX", "KLAC",
+    "NOW", "ADBE", "CRM", "ORCL", "INTU", "PANW", "CRWD", "ZS",
+    # Healthcare
+    "PFE", "MRK", "BMY", "GILD", "REGN", "VRTX", "ISRG", "BSX",
+    "MDT", "DHR", "TMO", "ABT", "ZTS",
+    # Financials
+    "BAC", "WFC", "C", "MS", "BLK", "SPGI", "MCO", "AXP",
+    "COF", "USB", "PNC", "TFC", "SCHW",
+    # Consumer Staples
+    "PG", "KO", "PEP", "WMT", "TGT", "MCD", "SBUX",
+    # Consumer Discretionary
+    "LOW", "CMG", "BKNG", "ABNB", "UBER",
+    # Industrials
+    "CAT", "DE", "MMM", "RTX", "HON", "LMT", "GE", "BA", "UPS", "FDX",
+    # Energy
+    "SLB", "OXY", "COP", "VLO", "MPC", "PSX", "BKR",
+    # Materials
+    "LIN", "APD", "SHW", "FCX", "NEM",
+    # Communication
+    "DIS", "NFLX", "T", "VZ", "CMCSA",
+    # Semiconductors
+    "TXN", "ADI", "MRVL", "ON",
 ]
 
 BARS_LANDING  = "/Volumes/bootcamp_students/trading_bd/landing/bars"
@@ -69,6 +98,27 @@ for ticker in TIER1_WATCHLIST:
         print(f"  bars: {ticker} FAILED — {exc}")
 
 print(f"Bars done: {bars_fetched} rows across {len(TIER1_WATCHLIST)} tickers")
+
+# COMMAND ----------
+# Fetch EOD bars for Tier 2 universe
+# Uses the same lookback window as Tier 1.  Failures are non-fatal — Tier 2
+# tickers with missing data simply won't appear in the nightly screen.
+
+tier2_fetched = 0
+tier2_failed  = 0
+for ticker in TIER2_UNIVERSE:
+    try:
+        bars = fetch_bars(ticker, bars_from, bars_to, POLYGON_KEY)
+        if bars:
+            ndjson = "\n".join(json.dumps(r) for r in bars)
+            with open(f"{BARS_LANDING}/{ticker}_{run_label}.jsonl", "w") as f:
+                f.write(ndjson)
+            tier2_fetched += len(bars)
+    except Exception as exc:
+        tier2_failed += 1
+        print(f"  bars (tier2): {ticker} FAILED — {exc}")
+
+print(f"Tier 2 bars done: {tier2_fetched} rows, {tier2_failed} failures")
 
 # COMMAND ----------
 # Fetch news (last 48h to catch anything published after yesterday's market close)
