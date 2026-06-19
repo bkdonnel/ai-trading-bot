@@ -38,6 +38,17 @@ sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 ## DLT Pipelines
 Do not import from `src/` inside `applyInPandas` UDFs in DLT pipelines. Worker nodes cannot resolve the `src` module via `sys.path` — only the driver node can. Define any pandas UDF functions inline in the pipeline notebook instead. The `sys.path.insert` is only needed if the driver itself needs to import from `src/`.
 
+## Ephemeral Tables
+Some tables are created and overwritten by notebooks rather than pre-created in `setup_schema.py`. This is intentional for transient data:
+- `context_cache` — overwritten each morning by `jobs/build_context_cache.py`; not in `setup_schema.py`
+
+Use `mode("overwrite").option("overwriteSchema", "true")` when writing these.
+
+## API Rate Limits
+Tier 2 universe tickers (~80 stocks): fetch bars nightly but do NOT fetch news. News is only fetched for Tier 1 (20 stocks) to stay within Polygon API call budgets. Tier 3 SEC 8-K detection uses EDGAR RSS instead of the news API.
+
+SEC EDGAR HTTP requests require a descriptive `User-Agent` header — not a generic string. Use: `{"User-Agent": "ai-trading-bot bryankdonnelly@comcast.net"}`
+
 ---
 
 # Coding Standards & Conventions
