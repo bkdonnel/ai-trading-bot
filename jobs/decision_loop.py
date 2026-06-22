@@ -1,4 +1,7 @@
 # Databricks notebook source
+%pip install anthropic mlflow
+
+# COMMAND ----------
 # Reads today's PENDING decisions (written by run_quant_signals), calls Claude
 # for each one, applies the agreement gate, and MERGEs the LLM verdicts back
 # into the decisions table.  Also logs run metadata to MLflow.
