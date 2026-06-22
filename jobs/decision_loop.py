@@ -1,5 +1,5 @@
 # Databricks notebook source
-%pip install anthropic mlflow
+%pip install "typing_extensions>=4.12.2" anthropic mlflow
 
 # COMMAND ----------
 # Reads today's PENDING decisions (written by run_quant_signals), calls Claude
