@@ -689,12 +689,14 @@ Build and validate each phase before moving to the next.
   - `jobs/run_quant_signals.py` — applies quant signal, writes PENDING decisions (LLM fields null until Phase 3)
 
 ### Phase 3 — LLM Reasoning Layer
-- [ ] Anthropic SDK integration
-- [ ] Batch context pull from Delta (single query, in-memory loop)
-- [ ] Prompt builder (assembles context from cached data)
-- [ ] Tool-use structured output (`submit_verdict`)
-- [ ] Agreement gate logic
-- [ ] MLflow experiment setup for prompt version tracking
+- [x] Anthropic API integration via direct `requests` call (SDK avoided — pydantic-core conflicts with Databricks cluster's system `typing_extensions`)
+- [x] Batch context pull from Delta for PENDING tickers only (news headlines + fundamentals)
+- [x] Prompt builder (`src/llm/prompt.py`) — assembles technicals, news, fundamentals into structured prompt
+- [x] Tool-use structured output (`submit_verdict`) — `src/llm/claude.py`
+- [x] Agreement gate logic (`src/llm/agreement.py`) — BUY+CONFIRM=full, BUY+UNCERTAIN=60%, all CONTRADICT=SKIP
+- [x] `jobs/decision_loop.py` — reads PENDING decisions, calls Claude, MERGEs verdicts into decisions table
+- [ ] MLflow experiment setup for prompt version tracking (deferred — mlflow pip install also triggers pydantic-core conflict on this cluster)
+- [ ] End-to-end test with live market data (pending: update `anthropic_api_key` secret with DataExpert proxy key `sk-de...`)
 
 ### Phase 4 — Execution & Risk
 - [ ] Alpaca order placement

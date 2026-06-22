@@ -18,8 +18,8 @@ Locally, set the corresponding environment variable (e.g. `POLYGON_API_KEY`).
 Current secrets in scope:
 - `alpaca_api_key` / `alpaca_secret_key` — Alpaca paper trading
 - `polygon_api_key` — Polygon.io market data + news
-- `anthropic_api_key` — Claude (used in Phase 3)
-- `fmp_api_key` — Financial Modeling Prep fundamentals (key is valid but free tier does not cover the endpoints we need — upgrade to Starter plan before Phase 3)
+- `anthropic_api_key` — Claude proxy key via DataExpert (`sk-de...`). Original `sk-ant-` key is no longer active. Proxy URL: `https://www.dataexpert.io/api/v1/anthropic/messages`
+- `fmp_api_key` — Financial Modeling Prep (upgraded to Starter plan 2026-06-22; covers earnings-surprises, price-target-consensus, analyst-stock-recommendations)
 
 ## File Storage
 This workspace has Unity Catalog enabled with DBFS access restricted.
@@ -43,6 +43,37 @@ Some tables are created and overwritten by notebooks rather than pre-created in 
 - `context_cache` — overwritten each morning by `jobs/build_context_cache.py`; not in `setup_schema.py`
 
 Use `mode("overwrite").option("overwriteSchema", "true")` when writing these.
+
+## Databricks Cluster — Dependency Constraints
+
+The "DataExpert All Purpose" cluster has a system `typing_extensions` that is too old to support `deprecated` (needs 4.5.0+) or `Sentinel` (needs 4.12.2+). The system path takes precedence over pip-installed packages, so upgrading via `%pip install` does not fix it.
+
+**Consequences:**
+- Do NOT `%pip install anthropic` in notebooks — pydantic-core (a transitive dep) requires modern typing_extensions and will fail
+- Do NOT `%pip install mlflow` in notebooks — same transitive pydantic-core conflict
+- Use `requests` (pre-installed) to call the Anthropic API directly instead of the SDK — see `src/llm/claude.py`
+- MLflow is removed from `jobs/decision_loop.py` for now; add it back only after resolving the cluster environment
+
+**Test PENDING decision:** To test `decision_loop.py` without waiting for a market day, insert a row via Spark SQL:
+```python
+import uuid
+from datetime import datetime, timezone
+decision_id = str(uuid.uuid4())
+ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+spark.sql(f"""
+    INSERT INTO bootcamp_students.trading_bd.decisions
+    (id, timestamp, ticker, tier, quant_action, quant_confidence, quant_reason,
+     llm_verdict, llm_confidence, llm_thesis, llm_risk_flags,
+     action_taken, skip_reason, entry_price, position_size, stop_loss_price,
+     exit_price, exit_reason, pnl, pnl_pct, hold_days, prompt_version)
+    VALUES (
+        '{decision_id}', TIMESTAMP('{ts}'), 'AAPL', 'tier1', 'BUY', 0.85,
+        'RSI 28.5 deeply oversold, volume 2.1x 20d avg, MACD +0.0421',
+        NULL, NULL, NULL, NULL, 'PENDING', NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, NULL, NULL, NULL
+    )
+""")
+```
 
 ## API Rate Limits
 Tier 2 universe tickers (~80 stocks): fetch bars nightly but do NOT fetch news. News is only fetched for Tier 1 (20 stocks) to stay within Polygon API call budgets. Tier 3 SEC 8-K detection uses EDGAR RSS instead of the news API.
