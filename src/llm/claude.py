@@ -39,7 +39,7 @@ _SYSTEM_PROMPT = (
     "You must call submit_verdict — no free-form responses."
 )
 
-_API_URL = "https://api.anthropic.com/v1/messages"
+_API_URL = "https://www.dataexpert.io/api/v1/anthropic/messages"
 
 
 def invoke_llm(prompt_text: str, api_key: str) -> dict[str, Any]:
