@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-import anthropic
+import requests
 
 _SUBMIT_VERDICT_TOOL: dict[str, Any] = {
     "name": "submit_verdict",
@@ -39,22 +39,33 @@ _SYSTEM_PROMPT = (
     "You must call submit_verdict — no free-form responses."
 )
 
+_API_URL = "https://api.anthropic.com/v1/messages"
+
 
 def invoke_llm(prompt_text: str, api_key: str) -> dict[str, Any]:
-    client = anthropic.Anthropic(api_key=api_key)
-
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        system=_SYSTEM_PROMPT,
-        tools=[_SUBMIT_VERDICT_TOOL],
-        tool_choice={"type": "tool", "name": "submit_verdict"},
-        messages=[{"role": "user", "content": prompt_text}],
+    response = requests.post(
+        _API_URL,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json={
+            "model": "claude-sonnet-4-6",
+            "max_tokens": 1024,
+            "system": _SYSTEM_PROMPT,
+            "tools": [_SUBMIT_VERDICT_TOOL],
+            "tool_choice": {"type": "tool", "name": "submit_verdict"},
+            "messages": [{"role": "user", "content": prompt_text}],
+        },
+        timeout=30,
     )
+    response.raise_for_status()
+    data = response.json()
 
-    for block in response.content:
-        if block.type == "tool_use" and block.name == "submit_verdict":
-            inp = block.input
+    for block in data.get("content", []):
+        if block.get("type") == "tool_use" and block.get("name") == "submit_verdict":
+            inp = block["input"]
             return {
                 "verdict": inp["verdict"],
                 "confidence": float(inp["confidence"]),

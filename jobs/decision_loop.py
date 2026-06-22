@@ -1,5 +1,5 @@
 # Databricks notebook source
-%pip install "pydantic-core<2.27.0" anthropic mlflow
+%pip install mlflow
 
 # COMMAND ----------
 # Reads today's PENDING decisions (written by run_quant_signals), calls Claude
