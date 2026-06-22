@@ -13,7 +13,6 @@ import xml.etree.ElementTree as ET
 from datetime import date
 
 import requests
-from pyspark.sql import functions as F
 from pyspark.sql.types import (
     DateType, StringType, StructField, StructType,
 )

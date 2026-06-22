@@ -1,13 +1,14 @@
 [tool.ruff]
 target-version = "py311"
 line-length = 120
+# pipelines/ contains Databricks notebooks with %pip magic commands — not valid Python
+exclude = ["pipelines/"]
 
 [tool.ruff.lint]
 select = ["E", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # Databricks notebook globals (spark, dbutils) are injected at runtime
-"pipelines/*.py" = ["F821"]
 "jobs/*.py" = ["F821"]
 
 [tool.mypy]

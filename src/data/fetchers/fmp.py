@@ -64,7 +64,7 @@ def _fetch_analyst_summary(ticker: str, api_key: str) -> dict[str, Any]:
     try:
         resp = requests.get(
             f"{_BASE}/analyst-stock-recommendations/{ticker}",
-            params={"limit": 1, "apiKey": api_key},
+            params={"limit": "1", "apiKey": api_key},
             timeout=30,
         )
         resp.raise_for_status()

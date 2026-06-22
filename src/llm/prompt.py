@@ -32,7 +32,8 @@ def _format_fundamentals(fund_row: dict[str, Any] | None) -> str:
     lines = [
         f"  Period: {fund_row.get('period', 'N/A')}",
         f"  EPS actual: {_fmt_float(fund_row.get('eps_actual'))} (est: {_fmt_float(fund_row.get('eps_estimate'))})",
-        f"  Revenue actual: {_fmt_float(fund_row.get('revenue_actual'))} (est: {_fmt_float(fund_row.get('revenue_estimate'))})",
+        f"  Revenue actual: {_fmt_float(fund_row.get('revenue_actual'))}"
+        f" (est: {_fmt_float(fund_row.get('revenue_estimate'))})",
         f"  Analyst target price: {_fmt_float(fund_row.get('analyst_target_price'))}",
         f"  Analyst rating: {fund_row.get('analyst_rating', 'N/A')}",
     ]
@@ -50,6 +51,8 @@ def build_prompt(
 ) -> str:
     news_block = _format_news(news_rows)
     fund_block = _format_fundamentals(fund_row)
+    news_count = context.get("news_count_48h", 0)
+    avg_sent = _fmt_float(context.get("avg_sentiment_48h"), 3)
 
     return f"""TICKER: {ticker}
 QUANT SIGNAL: {signal['quant_action']} (confidence: {float(signal['quant_confidence']):.0%})
@@ -63,7 +66,7 @@ TECHNICALS:
   ATR-14: {_fmt_float(context.get('atr_14'))}
   Volume ratio (20d avg): {_fmt_float(context.get('vol_ratio_20d'), 1)}x
   5d price change: {_fmt_pct(context.get('price_change_5d'))}
-  Avg news sentiment (48h, {context.get('news_count_48h', 0)} articles): {_fmt_float(context.get('avg_sentiment_48h'), 3)}
+  Avg news sentiment (48h, {news_count} articles): {avg_sent}
 
 RECENT NEWS (last 48h):
 {news_block}

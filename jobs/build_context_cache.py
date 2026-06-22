@@ -10,7 +10,7 @@
 
 from datetime import date, timedelta
 
-from pyspark.sql import Row, functions as F
+from pyspark.sql import Row
 
 CATALOG = "bootcamp_students"
 SCHEMA  = "trading_bd"
