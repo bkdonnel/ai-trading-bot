@@ -38,6 +38,9 @@ sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 ## DLT Pipelines
 Do not import from `src/` inside `applyInPandas` UDFs in DLT pipelines. Worker nodes cannot resolve the `src` module via `sys.path` — only the driver node can. Define any pandas UDF functions inline in the pipeline notebook instead. The `sys.path.insert` is only needed if the driver itself needs to import from `src/`.
 
+## Linting (ruff)
+`pipelines/` is excluded from ruff entirely — Databricks `%pip` magic commands are not valid Python syntax and cause ruff to fail before per-file-ignores can apply. Do not add `pipelines/` back to ruff scope. `jobs/` is linted but with `F821` ignored (spark, dbutils injected at runtime).
+
 ## Ephemeral Tables
 Some tables are created and overwritten by notebooks rather than pre-created in `setup_schema.py`. This is intentional for transient data:
 - `context_cache` — overwritten each morning by `jobs/build_context_cache.py`; not in `setup_schema.py`

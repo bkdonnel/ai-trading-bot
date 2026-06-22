@@ -655,7 +655,7 @@ Build and validate each phase before moving to the next.
 ### Phase 1 — Databricks Foundation + Data Pipeline
 - [x] Set up `trading_bd` schema and all six Delta tables in `bootcamp_students`
 - [x] GitHub repo created: https://github.com/bkdonnel/ai-trading-bot
-- [x] CI pipeline: gitleaks secret scan + lint + type check + tests
+- [x] CI pipeline: gitleaks secret scan + lint + type check + tests (35 tests passing; pipelines/ excluded from ruff — Databricks magic commands not valid Python)
 - [x] Git Folders connected in Databricks for deployment (path: `/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot/`)
 - [x] Centralized secrets management via `src/data/config.py`
 - [x] API accounts set up + keys added to Databricks secrets scope `trading_bd`
