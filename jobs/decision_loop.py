@@ -17,6 +17,7 @@ from datetime import date
 
 from delta.tables import DeltaTable
 from pyspark.sql import functions as F
+from pyspark.sql.types import DoubleType, StringType, StructField, StructType
 
 from src.data.config import get_anthropic_api_key
 from src.llm.agreement import resolve_action
@@ -135,10 +136,18 @@ print(f"\nSummary: {confirmed} confirmed, {skipped} skipped out of {len(updates)
 # COMMAND ----------
 # Merge LLM verdicts back into the decisions table
 
-updates_df = (
-    spark.createDataFrame(updates)
-    .withColumn("llm_confidence", F.col("llm_confidence").cast("double"))
-)
+_updates_schema = StructType([
+    StructField("id",             StringType(), False),
+    StructField("llm_verdict",    StringType(), True),
+    StructField("llm_confidence", DoubleType(), True),
+    StructField("llm_thesis",     StringType(), True),
+    StructField("llm_risk_flags", StringType(), True),
+    StructField("action_taken",   StringType(), True),
+    StructField("skip_reason",    StringType(), True),
+    StructField("prompt_version", StringType(), True),
+])
+
+updates_df = spark.createDataFrame(updates, schema=_updates_schema)
 
 DeltaTable.forName(spark, f"{CATALOG}.{SCHEMA}.decisions").alias("target").merge(
     updates_df.alias("src"),
