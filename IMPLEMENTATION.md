@@ -701,11 +701,12 @@ Build and validate each phase before moving to the next.
   - Explicit `StructType` schema required in `createDataFrame` — Spark cannot infer type of nullable `skip_reason` column
 
 ### Phase 4 — Execution & Risk
-- [ ] Alpaca order placement
-- [ ] Position sizing (volatility-adjusted + tier discount)
-- [ ] Stop-loss orders set at entry via Alpaca
-- [ ] Portfolio-level pre-trade checks
-- [ ] Daily halt logic
+- [x] Alpaca order placement (`src/execution/alpaca.py` — market orders + stop orders via paper API)
+- [x] Position sizing (`src/execution/sizing.py` — base 2%, vol-adjusted via ATR, capped 5%, tier discount, agreement-gate modifier)
+- [x] Stop-loss orders set at entry via Alpaca (GTC stop sell placed immediately after BUY fills)
+- [x] Portfolio-level pre-trade checks (`src/execution/risk.py` — max positions, duplicate holding, single-position cap)
+- [x] Daily halt logic (halt flag at UC Volume path; daily loss 2% + drawdown 10% checks; manual clear required)
+  - Note: max drawdown check uses current portfolio value as peak in `decision_loop.py` — peak persistence deferred to Phase 5 (position monitor will own portfolio state tracking)
 
 ### Phase 5 — Monitoring & Improvement
 - [ ] Position monitor as cloud function (every 30 min, market hours)
