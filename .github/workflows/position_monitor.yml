@@ -1,0 +1,36 @@
+name: Position Monitor
+
+on:
+  schedule:
+    # every 30 min, 1pm–8:30pm UTC (covers 9am–4:30pm ET year-round for EST and EDT)
+    - cron: '0,30 13-20 * * 1-5'
+  workflow_dispatch:  # allow manual trigger for testing
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  monitor:
+    name: Check open positions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run position monitor
+        run: python -m src.monitor.position_monitor
+        env:
+          ALPACA_API_KEY:       ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY:    ${{ secrets.ALPACA_SECRET_KEY }}
+          POLYGON_API_KEY:      ${{ secrets.POLYGON_API_KEY }}
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          # Optional — when set, FinBERT endpoint is used instead of keyword scorer
+          FINBERT_ENDPOINT_URL: ${{ secrets.FINBERT_ENDPOINT_URL }}
+          FINBERT_TOKEN:        ${{ secrets.FINBERT_TOKEN }}

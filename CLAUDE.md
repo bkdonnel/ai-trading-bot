@@ -47,6 +47,38 @@ Some tables are created and overwritten by notebooks rather than pre-created in 
 
 Use `mode("overwrite").option("overwriteSchema", "true")` when writing these.
 
+## Databricks Account Limitations
+
+This is an educational account via DataExpert.io. Two limitations apply:
+
+- **No personal access tokens (PAT)** — cannot be generated. Any code that calls Databricks REST APIs from outside the workspace (SQL Statement Execution API, Files API, DBFS API) will not work. External processes must be fully Alpaca-native or use other non-Databricks storage.
+- **No MLflow pip install** — triggers pydantic-core conflict (see cluster constraints below).
+
+## Position Monitor — External Process Pattern
+
+The position monitor runs outside Databricks (GitHub Actions, every 30 min during market hours). Because no PAT is available, it cannot query Delta tables directly. It is fully Alpaca-native:
+
+- **Position state**: `GET /v2/positions` (open holdings) + `GET /v2/orders?status=open` (find GTC stop orders by ticker)
+- **Entry time**: `GET /v2/orders?status=closed` — find most recent filled buy order per ticker
+- **News**: Polygon.io news API (`/v2/reference/news?ticker=X&published_utc.gte=<entry_time>`)
+- **Sentiment**: `src/monitor/finbert.py` keyword scorer by default; FinBERT endpoint opt-in via `FINBERT_ENDPOINT_URL` + `FINBERT_TOKEN` env vars
+- **Exit check**: Claude via direct Anthropic API (`src/monitor/exits.py` — `submit_exit_verdict` tool, EXIT/HOLD)
+- **Execution**: place market sell via Alpaca if Claude returns EXIT
+
+Exit data is written back to Delta by `jobs/reconcile_exits.py` — a nightly Databricks job that matches Alpaca filled sell orders to open decisions and updates `exit_price`, `exit_reason`, `pnl`, `pnl_pct`, `hold_days`.
+
+**GitHub Actions secrets required** (Settings → Secrets and variables → Actions):
+`ALPACA_API_KEY`, `ALPACA_SECRET_KEY`, `POLYGON_API_KEY`, `ANTHROPIC_API_KEY`
+Optional: `FINBERT_ENDPOINT_URL`, `FINBERT_TOKEN`
+
+## Halt Flag
+
+Trading halt state is persisted as a plain file — not a Delta table — so it is readable by both the Databricks job and future external processes without requiring a PAT:
+- Path: `/Volumes/bootcamp_students/trading_bd/landing/system_state/halt.flag`
+- If the file exists, trading is halted. `decision_loop.py` checks this at startup.
+- Set via `src/execution/risk.py:set_halt(reason)`. Clear manually via `clear_halt()`.
+- Never add automation to clear the halt — it requires manual intervention by design.
+
 ## Databricks Cluster — Dependency Constraints
 
 The "DataExpert All Purpose" cluster has a system `typing_extensions` that is too old to support `deprecated` (needs 4.5.0+) or `Sentinel` (needs 4.12.2+). The system path takes precedence over pip-installed packages, so upgrading via `%pip install` does not fix it.

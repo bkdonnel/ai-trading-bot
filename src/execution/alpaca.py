@@ -70,6 +70,38 @@ def place_market_order(
     return resp.json()
 
 
+def is_market_open(api_key: str, secret_key: str) -> bool:
+    resp = requests.get(
+        f"{ALPACA_BASE_URL}/v2/clock",
+        headers=_headers(api_key, secret_key),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return bool(resp.json().get("is_open", False))
+
+
+def get_open_orders(api_key: str, secret_key: str) -> list[dict[str, Any]]:
+    resp = requests.get(
+        f"{ALPACA_BASE_URL}/v2/orders",
+        headers=_headers(api_key, secret_key),
+        params={"status": "open", "limit": 500},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_filled_orders(api_key: str, secret_key: str, limit: int = 200) -> list[dict[str, Any]]:
+    resp = requests.get(
+        f"{ALPACA_BASE_URL}/v2/orders",
+        headers=_headers(api_key, secret_key),
+        params={"status": "closed", "direction": "desc", "limit": limit},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return [o for o in resp.json() if o.get("status") == "filled"]
+
+
 def place_stop_order(
     ticker: str,
     qty: float,

@@ -709,8 +709,15 @@ Build and validate each phase before moving to the next.
   - Note: max drawdown check uses current portfolio value as peak in `decision_loop.py` — peak persistence deferred to Phase 5 (position monitor will own portfolio state tracking)
 
 ### Phase 5 — Monitoring & Improvement
-- [ ] Position monitor as cloud function (every 30 min, market hours)
-- [ ] Breaking news exit check via FinBERT endpoint
+- [x] Position monitor as GitHub Actions scheduled workflow (every 30 min, market hours via Alpaca clock API)
+  - `src/monitor/position_monitor.py` — hard stop check, breaking news fetch, FinBERT scoring, Claude exit check
+  - `src/monitor/finbert.py` — keyword scorer as default (no token needed); FinBERT endpoint opt-in via FINBERT_ENDPOINT_URL + FINBERT_TOKEN env vars
+  - `src/monitor/exits.py` — Claude exit check with submit_exit_verdict tool (EXIT/HOLD)
+  - `src/execution/alpaca.py` — added is_market_open, get_open_orders, get_filled_orders
+  - `.github/workflows/position_monitor.yml` — cron 0,30 13-20 * * 1-5 UTC; exits early if market closed
+  - `jobs/reconcile_exits.py` — nightly Databricks job, matches Alpaca filled sell orders → decisions table (exit_price, exit_reason, pnl, pnl_pct, hold_days)
+  - 76 unit tests passing
+  - Note: Databricks PAT not available (educational account) — position monitor is fully Alpaca-native; no Delta access needed
 - [ ] Databricks SQL dashboard (win rate, profit factor, signal combinations)
 - [ ] Genie setup for natural language performance queries
 - [ ] Weekly review workflow in notebook
