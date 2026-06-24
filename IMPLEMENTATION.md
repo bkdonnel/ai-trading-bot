@@ -696,7 +696,9 @@ Build and validate each phase before moving to the next.
 - [x] Agreement gate logic (`src/llm/agreement.py`) — BUY+CONFIRM=full, BUY+UNCERTAIN=60%, all CONTRADICT=SKIP
 - [x] `jobs/decision_loop.py` — reads PENDING decisions, calls Claude, MERGEs verdicts into decisions table
 - [ ] MLflow experiment setup for prompt version tracking (deferred — mlflow pip install also triggers pydantic-core conflict on this cluster)
-- [ ] End-to-end test with live market data (pending: update `anthropic_api_key` secret with DataExpert proxy key `sk-de...`)
+- [x] End-to-end test confirmed: PENDING decision → Claude verdict → MERGE back into decisions table (2026-06-24)
+  - DataExpert proxy (`sk-de...`) only works with Claude Code CLI — switched to direct Anthropic API key (`sk-ant-...`) stored in `trading_bd` secrets scope
+  - Explicit `StructType` schema required in `createDataFrame` — Spark cannot infer type of nullable `skip_reason` column
 
 ### Phase 4 — Execution & Risk
 - [ ] Alpaca order placement
