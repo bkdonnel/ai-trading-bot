@@ -18,7 +18,7 @@ Locally, set the corresponding environment variable (e.g. `POLYGON_API_KEY`).
 Current secrets in scope:
 - `alpaca_api_key` / `alpaca_secret_key` — Alpaca paper trading
 - `polygon_api_key` — Polygon.io market data + news
-- `anthropic_api_key` — Claude proxy key via DataExpert (`sk-de...`). Original `sk-ant-` key is no longer active. Proxy URL: `https://www.dataexpert.io/api/v1/anthropic`
+- `anthropic_api_key` — Direct Anthropic API key (`sk-ant-...`). API URL: `https://api.anthropic.com/v1/messages`
 - `fmp_api_key` — Financial Modeling Prep (upgraded to Starter plan 2026-06-22; covers earnings-surprises, price-target-consensus, analyst-stock-recommendations)
 
 ## File Storage
