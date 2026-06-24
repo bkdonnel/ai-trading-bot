@@ -16,7 +16,6 @@ sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 from datetime import date
 
 from delta.tables import DeltaTable
-from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, StringType, StructField, StructType
 
 from src.data.config import get_anthropic_api_key
