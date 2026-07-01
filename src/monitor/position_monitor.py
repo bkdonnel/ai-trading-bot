@@ -76,12 +76,22 @@ def fetch_breaking_news(ticker: str, since_iso: str, polygon_key: str) -> list[d
 
 
 def run() -> None:
-    alpaca_key    = os.environ["ALPACA_API_KEY"]
-    alpaca_secret = os.environ["ALPACA_SECRET_KEY"]
-    polygon_key   = os.environ["POLYGON_API_KEY"]
-    anthropic_key = os.environ["ANTHROPIC_API_KEY"]
+    alpaca_key    = os.environ.get("ALPACA_API_KEY", "")
+    alpaca_secret = os.environ.get("ALPACA_SECRET_KEY", "")
+    polygon_key   = os.environ.get("POLYGON_API_KEY", "")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     finbert_url   = os.environ.get("FINBERT_ENDPOINT_URL")
     finbert_token = os.environ.get("FINBERT_TOKEN")
+
+    missing = [name for name, val in [
+        ("ALPACA_API_KEY", alpaca_key),
+        ("ALPACA_SECRET_KEY", alpaca_secret),
+        ("POLYGON_API_KEY", polygon_key),
+        ("ANTHROPIC_API_KEY", anthropic_key),
+    ] if not val]
+    if missing:
+        print(f"Missing required credentials: {', '.join(missing)} — skipping run")
+        return
 
     if not is_market_open(alpaca_key, alpaca_secret):
         print("Market is closed — nothing to do")

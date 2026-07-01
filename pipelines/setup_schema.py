@@ -94,6 +94,25 @@ print("candidates ready")
 # COMMAND ----------
 
 spark.sql(f"""
+    CREATE TABLE IF NOT EXISTS {CATALOG}.{SCHEMA}.quant_features (
+        ticker           STRING  NOT NULL,
+        date             DATE    NOT NULL,
+        close            DOUBLE,
+        volume           LONG,
+        rsi_14           DOUBLE,
+        macd             DOUBLE,
+        atr_14           DOUBLE,
+        vol_ratio_20d    DOUBLE,
+        price_change_5d  DOUBLE
+    )
+    USING DELTA
+    COMMENT 'Latest quant indicators per ticker, updated nightly by update_feature_store.py'
+""")
+print("quant_features ready")
+
+# COMMAND ----------
+
+spark.sql(f"""
     CREATE TABLE IF NOT EXISTS {CATALOG}.{SCHEMA}.decisions (
         id               STRING    NOT NULL,
         timestamp        TIMESTAMP NOT NULL,

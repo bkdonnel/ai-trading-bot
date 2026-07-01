@@ -677,7 +677,8 @@ Build and validate each phase before moving to the next.
 
 ### Phase 2 — Quant Signal Layer
 - [x] RSI, MACD, ATR, volume ratio computed in DLT and stored in Delta
-- [x] Feature Store setup for quant indicators (`jobs/update_feature_store.py`)
+- [x] Quant indicators written nightly to `quant_features` Delta table (`jobs/update_feature_store.py`)
+  - Writes directly via `DeltaTable.merge` — `databricks.feature_engineering.FeatureEngineeringClient` is not available on the cluster
 - [x] Tier 2 screen (`jobs/tier2_screen.py`) — Spark SQL parallel screen, writes to candidates table
   - Market cap filter omitted until FMP Starter plan active
   - `TIER2_UNIVERSE` (~80 additional S&P 500 tickers) added to `jobs/fetch_market_data.py`
@@ -710,7 +711,7 @@ Build and validate each phase before moving to the next.
 
 ### Phase 5 — Monitoring & Improvement
 - [x] Position monitor as GitHub Actions scheduled workflow (every 30 min, market hours via Alpaca clock API)
-  - `src/monitor/position_monitor.py` — hard stop check, breaking news fetch, FinBERT scoring, Claude exit check
+  - `src/monitor/position_monitor.py` — hard stop check, breaking news fetch, FinBERT scoring, Claude exit check; exits cleanly if credentials missing
   - `src/monitor/finbert.py` — keyword scorer as default (no token needed); FinBERT endpoint opt-in via FINBERT_ENDPOINT_URL + FINBERT_TOKEN env vars
   - `src/monitor/exits.py` — Claude exit check with submit_exit_verdict tool (EXIT/HOLD)
   - `src/execution/alpaca.py` — added is_market_open, get_open_orders, get_filled_orders
@@ -718,6 +719,11 @@ Build and validate each phase before moving to the next.
   - `jobs/reconcile_exits.py` — nightly Databricks job, matches Alpaca filled sell orders → decisions table (exit_price, exit_reason, pnl, pnl_pct, hold_days)
   - 76 unit tests passing
   - Note: Databricks PAT not available (educational account) — position monitor is fully Alpaca-native; no Delta access needed
+  - GitHub Actions secrets confirmed added and working: ALPACA_API_KEY, ALPACA_SECRET_KEY, POLYGON_API_KEY, ANTHROPIC_API_KEY
+- [x] Databricks Workflows scheduled in UI (2026-06-30)
+  - `trading-nightly-pipeline` — 11pm ET daily; tasks: fetch_market_data → refresh_dlt_pipeline → update_feature_store → run_tier2_screen + run_tier3_triggers
+  - `trading-decision-loop` — 9:45am ET weekdays; tasks: build_context_cache → run_quant_signals → invoke_llm_and_execute
+  - Quartz cron weekday syntax for Databricks UI: `0 45 9 ? * MON,TUE,WED,THU,FRI` (range syntax and numeric day ranges rejected by UI)
 - [ ] Databricks SQL dashboard (win rate, profit factor, signal combinations)
 - [ ] Genie setup for natural language performance queries
 - [ ] Weekly review workflow in notebook

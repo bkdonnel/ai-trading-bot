@@ -1,11 +1,15 @@
 # Databricks notebook source
 # Reads the latest technical indicators per ticker from price_bars (silver)
-# and writes them to the Databricks Feature Store.
+# and writes them to the quant_features Delta table.
 # Runs nightly after the DLT pipeline refresh (refresh_dlt_pipeline task).
+#
+# Writes directly to Delta rather than via FeatureEngineeringClient — the
+# "DataExpert All Purpose" cluster does not have databricks.feature_engineering
+# available. See CLAUDE.md Databricks Cluster Dependency Constraints.
 
 # COMMAND ----------
 
-from databricks.feature_engineering import FeatureEngineeringClient
+from delta.tables import DeltaTable
 
 CATALOG = "bootcamp_students"
 SCHEMA  = "trading_bd"
@@ -48,19 +52,23 @@ print(f"Features computed for {ticker_count} tickers")
 features_df.show()
 
 # COMMAND ----------
-# Write to Feature Store.
-# create_table on first run; write_table (merge) on subsequent runs.
-
-fe = FeatureEngineeringClient()
+# Write to quant_features Delta table.
+# create on first run; merge (upsert on ticker, date) on subsequent runs.
 
 if not spark.catalog.tableExists(FEATURE_TABLE):
-    fe.create_table(
-        name=FEATURE_TABLE,
-        primary_keys=["ticker", "date"],
-        df=features_df,
-        description="Latest quant indicators per ticker for the decision loop",
-    )
-    print(f"Created Feature Store table: {FEATURE_TABLE} ({ticker_count} rows)")
+    features_df.write.format("delta").saveAsTable(FEATURE_TABLE)
+    print(f"Created {FEATURE_TABLE} ({ticker_count} rows)")
 else:
-    fe.write_table(name=FEATURE_TABLE, df=features_df, mode="merge")
-    print(f"Updated Feature Store table: {FEATURE_TABLE} ({ticker_count} rows)")
+    DeltaTable.forName(spark, FEATURE_TABLE).alias("target").merge(
+        features_df.alias("src"),
+        "target.ticker = src.ticker AND target.date = src.date"
+    ).whenMatchedUpdate(set={
+        "close":           "src.close",
+        "volume":          "src.volume",
+        "rsi_14":          "src.rsi_14",
+        "macd":            "src.macd",
+        "atr_14":          "src.atr_14",
+        "vol_ratio_20d":   "src.vol_ratio_20d",
+        "price_change_5d": "src.price_change_5d",
+    }).whenNotMatchedInsertAll().execute()
+    print(f"Updated {FEATURE_TABLE} ({ticker_count} rows)")
