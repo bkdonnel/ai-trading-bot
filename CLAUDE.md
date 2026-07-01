@@ -89,6 +89,8 @@ The "DataExpert All Purpose" cluster has a system `typing_extensions` that is to
 - Use `requests` (pre-installed) to call the Anthropic API directly instead of the SDK — see `src/llm/claude.py`
 - MLflow is removed from `jobs/decision_loop.py` for now; add it back only after resolving the cluster environment
 
+**Databricks Workflows — per-task Environment setting:** Each task in a Workflow job can independently be set to either the job-level **Default** environment or its own **Notebook Environment** (a leftover, per-notebook environment that can carry stale pip dependencies from earlier manual/interactive testing). None of the `jobs/*.py` notebooks need any declared dependencies beyond what Databricks preinstalls (`requests`, `pyspark`, `delta-spark`) — every task should be set to Default. If a single task fails with a "Library installation failed... serverless compute" / `pydantic-core` error while sibling tasks in the same job succeed, check that task's "Environments and libraries" setting first — it is likely pinned to Notebook Environment instead of Default.
+
 **Test PENDING decision:** To test `decision_loop.py` without waiting for a market day, insert a row via Spark SQL:
 ```python
 import uuid

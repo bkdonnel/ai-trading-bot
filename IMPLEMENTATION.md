@@ -720,10 +720,12 @@ Build and validate each phase before moving to the next.
   - 76 unit tests passing
   - Note: Databricks PAT not available (educational account) — position monitor is fully Alpaca-native; no Delta access needed
   - GitHub Actions secrets confirmed added and working: ALPACA_API_KEY, ALPACA_SECRET_KEY, POLYGON_API_KEY, ANTHROPIC_API_KEY
-- [x] Databricks Workflows scheduled in UI (2026-06-30)
+- [x] Databricks Workflows scheduled in UI (2026-06-30); both confirmed running end-to-end with no errors (2026-07-01)
   - `trading-nightly-pipeline` — 11pm ET daily; tasks: fetch_market_data → refresh_dlt_pipeline → update_feature_store → run_tier2_screen + run_tier3_triggers
   - `trading-decision-loop` — 9:45am ET weekdays; tasks: build_context_cache → run_quant_signals → invoke_llm_and_execute
   - Quartz cron weekday syntax for Databricks UI: `0 45 9 ? * MON,TUE,WED,THU,FRI` (range syntax and numeric day ranges rejected by UI)
+  - Fixed: `update_feature_store` failed with `ModuleNotFoundError: No module named 'databricks.feature_engineering'` — rewrote `jobs/update_feature_store.py` to write/merge the `quant_features` Delta table directly instead of using `FeatureEngineeringClient`; table added to `pipelines/setup_schema.py`
+  - Fixed: `invoke_llm_and_execute` failed with a serverless "Library installation failed" / `pydantic-core` error — the task's Environment was pinned to a stale per-notebook Notebook Environment instead of the job-level Default; switched to Default in the UI (no code change). See CLAUDE.md Databricks Cluster Dependency Constraints.
 - [ ] Databricks SQL dashboard (win rate, profit factor, signal combinations)
 - [ ] Genie setup for natural language performance queries
 - [ ] Weekly review workflow in notebook
