@@ -1,0 +1,428 @@
+{
+  "datasets": [
+    {
+      "name": "kpis",
+      "displayName": "Headline KPIs",
+      "query": "SELECT SUM(CASE WHEN exit_price IS NOT NULL THEN 1 ELSE 0 END) AS closed_trades, SUM(CASE WHEN exit_price IS NULL THEN 1 ELSE 0 END) AS open_positions, ROUND(100 * AVG(CASE WHEN exit_price IS NOT NULL THEN CASE WHEN pnl > 0 THEN 1.0 ELSE 0.0 END END), 1) AS win_rate_pct, ROUND(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) / NULLIF(ABS(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)), 0), 2) AS profit_factor, ROUND(100 * AVG(CASE WHEN exit_price IS NOT NULL THEN pnl_pct END), 2) AS avg_pnl_pct, ROUND(SUM(CASE WHEN exit_price IS NOT NULL THEN pnl ELSE 0 END), 2) AS total_pnl FROM bootcamp_students.trading_bd.decisions WHERE action_taken = 'BUY'"
+    },
+    {
+      "name": "decisions_per_day",
+      "displayName": "Decisions per day by outcome",
+      "query": "SELECT DATE(timestamp) AS decision_date, action_taken, COUNT(*) AS decisions FROM bootcamp_students.trading_bd.decisions WHERE timestamp >= CURRENT_DATE() - INTERVAL 30 DAYS GROUP BY DATE(timestamp), action_taken ORDER BY decision_date"
+    },
+    {
+      "name": "verdict_mix",
+      "displayName": "Quant vs LLM verdict mix",
+      "query": "SELECT quant_action, llm_verdict, action_taken, COUNT(*) AS decisions FROM bootcamp_students.trading_bd.decisions WHERE action_taken != 'PENDING' GROUP BY quant_action, llm_verdict, action_taken ORDER BY decisions DESC"
+    },
+    {
+      "name": "signal_performance",
+      "displayName": "Performance by signal combination",
+      "query": "SELECT quant_action, llm_verdict, COUNT(*) AS trades, ROUND(100 * AVG(CASE WHEN pnl > 0 THEN 1.0 ELSE 0.0 END), 1) AS win_rate_pct, ROUND(100 * AVG(pnl_pct), 2) AS avg_pnl_pct, ROUND(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) / NULLIF(ABS(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)), 0), 2) AS profit_factor FROM bootcamp_students.trading_bd.decisions WHERE action_taken = 'BUY' AND exit_price IS NOT NULL GROUP BY quant_action, llm_verdict ORDER BY profit_factor DESC"
+    },
+    {
+      "name": "open_positions",
+      "displayName": "Open positions",
+      "query": "SELECT ticker, DATE(timestamp) AS entry_date, ROUND(entry_price, 2) AS entry_price, ROUND(position_size, 2) AS position_size, ROUND(stop_loss_price, 2) AS stop_loss_price, DATEDIFF(CURRENT_DATE(), DATE(timestamp)) AS days_open FROM bootcamp_students.trading_bd.decisions WHERE action_taken = 'BUY' AND exit_price IS NULL ORDER BY entry_date"
+    },
+    {
+      "name": "skip_reasons",
+      "displayName": "Skip reasons (last 30 days)",
+      "query": "SELECT skip_reason, COUNT(*) AS decisions, MAX(DATE(timestamp)) AS last_seen FROM bootcamp_students.trading_bd.decisions WHERE action_taken = 'SKIP' AND timestamp >= CURRENT_DATE() - INTERVAL 30 DAYS GROUP BY skip_reason ORDER BY decisions DESC"
+    },
+    {
+      "name": "recent_closed",
+      "displayName": "Recent closed trades",
+      "query": "SELECT DATE(timestamp) AS entry_date, ticker, ROUND(entry_price, 2) AS entry_price, ROUND(exit_price, 2) AS exit_price, exit_reason, ROUND(pnl, 2) AS pnl, ROUND(100 * pnl_pct, 2) AS pnl_pct, hold_days FROM bootcamp_students.trading_bd.decisions WHERE exit_price IS NOT NULL ORDER BY timestamp DESC LIMIT 20"
+    },
+    {
+      "name": "candidates_per_night",
+      "displayName": "Candidates per night by tier",
+      "query": "SELECT screen_date, tier, COUNT(*) AS candidates FROM bootcamp_students.trading_bd.candidates WHERE screen_date >= CURRENT_DATE() - INTERVAL 30 DAYS GROUP BY screen_date, tier ORDER BY screen_date"
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Trading Performance",
+      "layout": [
+        {
+          "widget": {
+            "name": "counter_closed_trades",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpis",
+                  "fields": [{"name": "closed_trades", "expression": "`closed_trades`"}],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {"value": {"fieldName": "closed_trades", "displayName": "Closed trades"}},
+              "frame": {"title": "Closed trades", "showTitle": true}
+            }
+          },
+          "position": {"x": 0, "y": 0, "width": 1, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "counter_open_positions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpis",
+                  "fields": [{"name": "open_positions", "expression": "`open_positions`"}],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {"value": {"fieldName": "open_positions", "displayName": "Open positions"}},
+              "frame": {"title": "Open positions", "showTitle": true}
+            }
+          },
+          "position": {"x": 1, "y": 0, "width": 1, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "counter_win_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpis",
+                  "fields": [{"name": "win_rate_pct", "expression": "`win_rate_pct`"}],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {"value": {"fieldName": "win_rate_pct", "displayName": "Win rate %"}},
+              "frame": {"title": "Win rate % (target > 50)", "showTitle": true}
+            }
+          },
+          "position": {"x": 2, "y": 0, "width": 1, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "counter_profit_factor",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpis",
+                  "fields": [{"name": "profit_factor", "expression": "`profit_factor`"}],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {"value": {"fieldName": "profit_factor", "displayName": "Profit factor"}},
+              "frame": {"title": "Profit factor (target > 1.5)", "showTitle": true}
+            }
+          },
+          "position": {"x": 3, "y": 0, "width": 1, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "counter_avg_pnl_pct",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpis",
+                  "fields": [{"name": "avg_pnl_pct", "expression": "`avg_pnl_pct`"}],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {"value": {"fieldName": "avg_pnl_pct", "displayName": "Avg PnL %"}},
+              "frame": {"title": "Avg PnL % per trade", "showTitle": true}
+            }
+          },
+          "position": {"x": 4, "y": 0, "width": 1, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "counter_total_pnl",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "kpis",
+                  "fields": [{"name": "total_pnl", "expression": "`total_pnl`"}],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {"value": {"fieldName": "total_pnl", "displayName": "Total PnL $"}},
+              "frame": {"title": "Total PnL $ (closed)", "showTitle": true}
+            }
+          },
+          "position": {"x": 5, "y": 0, "width": 1, "height": 3}
+        },
+        {
+          "widget": {
+            "name": "chart_decisions_per_day",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "decisions_per_day",
+                  "fields": [
+                    {"name": "decision_date", "expression": "`decision_date`"},
+                    {"name": "action_taken", "expression": "`action_taken`"},
+                    {"name": "decisions", "expression": "`decisions`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "decision_date", "scale": {"type": "temporal"}, "displayName": "Date"},
+                "y": {"fieldName": "decisions", "scale": {"type": "quantitative"}, "displayName": "Decisions"},
+                "color": {"fieldName": "action_taken", "scale": {"type": "categorical"}, "displayName": "Outcome"}
+              },
+              "frame": {"title": "Decisions per day by outcome (30d)", "showTitle": true}
+            }
+          },
+          "position": {"x": 0, "y": 3, "width": 3, "height": 8}
+        },
+        {
+          "widget": {
+            "name": "table_verdict_mix",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "verdict_mix",
+                  "fields": [
+                    {"name": "quant_action", "expression": "`quant_action`"},
+                    {"name": "llm_verdict", "expression": "`llm_verdict`"},
+                    {"name": "action_taken", "expression": "`action_taken`"},
+                    {"name": "decisions", "expression": "`decisions`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {"fieldName": "quant_action", "displayName": "Quant"},
+                  {"fieldName": "llm_verdict", "displayName": "LLM verdict"},
+                  {"fieldName": "action_taken", "displayName": "Outcome"},
+                  {"fieldName": "decisions", "displayName": "Decisions"}
+                ]
+              },
+              "frame": {"title": "Quant vs LLM verdict mix (all resolved)", "showTitle": true}
+            }
+          },
+          "position": {"x": 3, "y": 3, "width": 3, "height": 8}
+        },
+        {
+          "widget": {
+            "name": "table_signal_performance",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "signal_performance",
+                  "fields": [
+                    {"name": "quant_action", "expression": "`quant_action`"},
+                    {"name": "llm_verdict", "expression": "`llm_verdict`"},
+                    {"name": "trades", "expression": "`trades`"},
+                    {"name": "win_rate_pct", "expression": "`win_rate_pct`"},
+                    {"name": "avg_pnl_pct", "expression": "`avg_pnl_pct`"},
+                    {"name": "profit_factor", "expression": "`profit_factor`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {"fieldName": "quant_action", "displayName": "Quant"},
+                  {"fieldName": "llm_verdict", "displayName": "LLM verdict"},
+                  {"fieldName": "trades", "displayName": "Trades"},
+                  {"fieldName": "win_rate_pct", "displayName": "Win rate %"},
+                  {"fieldName": "avg_pnl_pct", "displayName": "Avg PnL %"},
+                  {"fieldName": "profit_factor", "displayName": "Profit factor"}
+                ]
+              },
+              "frame": {"title": "Performance by signal combination (closed trades)", "showTitle": true}
+            }
+          },
+          "position": {"x": 0, "y": 11, "width": 3, "height": 8}
+        },
+        {
+          "widget": {
+            "name": "chart_candidates_per_night",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "candidates_per_night",
+                  "fields": [
+                    {"name": "screen_date", "expression": "`screen_date`"},
+                    {"name": "tier", "expression": "`tier`"},
+                    {"name": "candidates", "expression": "`candidates`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {"fieldName": "screen_date", "scale": {"type": "temporal"}, "displayName": "Screen date"},
+                "y": {"fieldName": "candidates", "scale": {"type": "quantitative"}, "displayName": "Candidates"},
+                "color": {"fieldName": "tier", "scale": {"type": "categorical"}, "displayName": "Tier"}
+              },
+              "frame": {"title": "Candidates per night by tier (30d)", "showTitle": true}
+            }
+          },
+          "position": {"x": 3, "y": 11, "width": 3, "height": 8}
+        },
+        {
+          "widget": {
+            "name": "table_open_positions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "open_positions",
+                  "fields": [
+                    {"name": "ticker", "expression": "`ticker`"},
+                    {"name": "entry_date", "expression": "`entry_date`"},
+                    {"name": "entry_price", "expression": "`entry_price`"},
+                    {"name": "position_size", "expression": "`position_size`"},
+                    {"name": "stop_loss_price", "expression": "`stop_loss_price`"},
+                    {"name": "days_open", "expression": "`days_open`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {"fieldName": "ticker", "displayName": "Ticker"},
+                  {"fieldName": "entry_date", "displayName": "Entry date"},
+                  {"fieldName": "entry_price", "displayName": "Entry $"},
+                  {"fieldName": "position_size", "displayName": "Size $"},
+                  {"fieldName": "stop_loss_price", "displayName": "Stop $"},
+                  {"fieldName": "days_open", "displayName": "Days open"}
+                ]
+              },
+              "frame": {"title": "Open positions", "showTitle": true}
+            }
+          },
+          "position": {"x": 0, "y": 19, "width": 3, "height": 8}
+        },
+        {
+          "widget": {
+            "name": "table_skip_reasons",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "skip_reasons",
+                  "fields": [
+                    {"name": "skip_reason", "expression": "`skip_reason`"},
+                    {"name": "decisions", "expression": "`decisions`"},
+                    {"name": "last_seen", "expression": "`last_seen`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {"fieldName": "skip_reason", "displayName": "Skip reason"},
+                  {"fieldName": "decisions", "displayName": "Decisions"},
+                  {"fieldName": "last_seen", "displayName": "Last seen"}
+                ]
+              },
+              "frame": {"title": "Skip reasons (30d)", "showTitle": true}
+            }
+          },
+          "position": {"x": 3, "y": 19, "width": 3, "height": 8}
+        },
+        {
+          "widget": {
+            "name": "table_recent_closed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "recent_closed",
+                  "fields": [
+                    {"name": "entry_date", "expression": "`entry_date`"},
+                    {"name": "ticker", "expression": "`ticker`"},
+                    {"name": "entry_price", "expression": "`entry_price`"},
+                    {"name": "exit_price", "expression": "`exit_price`"},
+                    {"name": "exit_reason", "expression": "`exit_reason`"},
+                    {"name": "pnl", "expression": "`pnl`"},
+                    {"name": "pnl_pct", "expression": "`pnl_pct`"},
+                    {"name": "hold_days", "expression": "`hold_days`"}
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {"fieldName": "entry_date", "displayName": "Entry date"},
+                  {"fieldName": "ticker", "displayName": "Ticker"},
+                  {"fieldName": "entry_price", "displayName": "Entry $"},
+                  {"fieldName": "exit_price", "displayName": "Exit $"},
+                  {"fieldName": "exit_reason", "displayName": "Exit reason"},
+                  {"fieldName": "pnl", "displayName": "PnL $"},
+                  {"fieldName": "pnl_pct", "displayName": "PnL %"},
+                  {"fieldName": "hold_days", "displayName": "Days held"}
+                ]
+              },
+              "frame": {"title": "Recent closed trades (last 20)", "showTitle": true}
+            }
+          },
+          "position": {"x": 0, "y": 27, "width": 6, "height": 8}
+        }
+      ]
+    }
+  ]
+}
