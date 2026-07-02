@@ -1,8 +1,39 @@
-import requests
+import re
+import uuid
+from datetime import datetime
 from typing import Any
+
+import requests
 
 
 ALPACA_BASE_URL = "https://paper-api.alpaca.markets"
+
+
+def parse_order_timestamp(value: str | None) -> datetime | None:
+    """Parse an RFC 3339 timestamp from an Alpaca order, trimming nanosecond precision."""
+    if not value:
+        return None
+    trimmed = re.sub(r"\.(\d{1,6})\d*", r".\1", value.replace("Z", "+00:00"))
+    return datetime.fromisoformat(trimmed)
+
+
+def order_to_trade_record(order: dict[str, Any], decision_id: str) -> dict[str, Any]:
+    """Map an Alpaca order response to a row for the trades Delta table.
+
+    Market orders are usually still unfilled when the response returns, so
+    filled_price and filled_at are often None at write time.
+    """
+    return {
+        "id": order.get("id") or str(uuid.uuid4()),
+        "decision_id": decision_id,
+        "ticker": order.get("symbol", ""),
+        "side": order.get("side"),
+        "order_type": order.get("type"),
+        "quantity": float(order["qty"]) if order.get("qty") else None,
+        "filled_price": float(order["filled_avg_price"]) if order.get("filled_avg_price") else None,
+        "submitted_at": parse_order_timestamp(order.get("submitted_at")),
+        "filled_at": parse_order_timestamp(order.get("filled_at")),
+    }
 
 
 def _headers(api_key: str, secret_key: str) -> dict[str, str]:

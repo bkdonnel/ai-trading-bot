@@ -16,7 +16,7 @@ sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 from datetime import date
 
 from delta.tables import DeltaTable
-from pyspark.sql.types import DoubleType, StringType, StructField, StructType
+from pyspark.sql.types import DoubleType, StringType, StructField, StructType, TimestampType
 
 from src.data.config import get_alpaca_api_key, get_alpaca_secret_key, get_anthropic_api_key
 from src.execution.alpaca import (
@@ -24,6 +24,7 @@ from src.execution.alpaca import (
     get_latest_quote,
     get_open_positions,
     is_market_open,
+    order_to_trade_record,
     place_market_order,
     place_stop_order,
 )
@@ -134,6 +135,7 @@ print(
 # Call Claude for each PENDING decision
 
 updates: list[dict] = []
+trade_rows: list[dict] = []
 
 for row in pending:
     ticker = row.ticker
@@ -196,9 +198,13 @@ for row in pending:
             entry_price = position_size = stop_loss_price = None
         else:
             try:
-                place_market_order(ticker, resolution["action_taken"], sizing["qty"], alpaca_key, alpaca_secret)
+                market_order = place_market_order(
+                    ticker, resolution["action_taken"], sizing["qty"], alpaca_key, alpaca_secret
+                )
+                trade_rows.append(order_to_trade_record(market_order, row.id))
                 if resolution["action_taken"] == "BUY" and stop_loss_price:
-                    place_stop_order(ticker, sizing["qty"], stop_loss_price, alpaca_key, alpaca_secret)
+                    stop_order = place_stop_order(ticker, sizing["qty"], stop_loss_price, alpaca_key, alpaca_secret)
+                    trade_rows.append(order_to_trade_record(stop_order, row.id))
                 print(
                     f"  Executed: {resolution['action_taken']} {sizing['qty']} shares "
                     f"@ ~${entry_price:.2f}, stop ${stop_loss_price}"
@@ -263,3 +269,27 @@ DeltaTable.forName(spark, f"{CATALOG}.{SCHEMA}.decisions").alias("target").merge
 }).execute()
 
 print(f"Merged {len(updates)} LLM verdicts into decisions table")
+
+# COMMAND ----------
+# Append placed orders to the trades table.
+# filled_price and filled_at are usually still null when the order response
+# comes back — market orders fill seconds later. The row records what was
+# submitted; fills are visible in Alpaca and reconciled nightly for sells.
+
+if trade_rows:
+    _trades_schema = StructType([
+        StructField("id",           StringType(),    False),
+        StructField("decision_id",  StringType(),    False),
+        StructField("ticker",       StringType(),    False),
+        StructField("side",         StringType(),    True),
+        StructField("order_type",   StringType(),    True),
+        StructField("quantity",     DoubleType(),    True),
+        StructField("filled_price", DoubleType(),    True),
+        StructField("submitted_at", TimestampType(), True),
+        StructField("filled_at",    TimestampType(), True),
+    ])
+    trades_df = spark.createDataFrame(trade_rows, schema=_trades_schema)
+    trades_df.write.format("delta").mode("append").saveAsTable(f"{CATALOG}.{SCHEMA}.trades")
+    print(f"Appended {len(trade_rows)} orders to trades table")
+else:
+    print("No orders placed — trades table unchanged")
