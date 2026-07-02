@@ -200,6 +200,8 @@ display(spark.sql(f"""
 #   - resolved (non-PENDING) but no LLM verdict
 #   - BUY but missing entry_price / position_size / stop_loss_price
 #   - SKIP but no skip_reason
+# Exception: skip_reason = 'market closed' rows are skipped before the LLM
+# runs (holiday guard), so a null llm_verdict there is expected.
 # Empty result = pass.
 
 display(spark.sql(f"""
@@ -213,6 +215,7 @@ display(spark.sql(f"""
         END AS problem
     FROM {CATALOG}.{SCHEMA}.decisions
     WHERE action_taken IN ('BUY', 'SELL', 'SKIP')
+      AND COALESCE(skip_reason, '') != 'market closed'
       AND (
             llm_verdict IS NULL
             OR (action_taken = 'BUY' AND (entry_price IS NULL

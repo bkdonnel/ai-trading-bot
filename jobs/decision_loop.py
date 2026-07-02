@@ -19,7 +19,14 @@ from delta.tables import DeltaTable
 from pyspark.sql.types import DoubleType, StringType, StructField, StructType
 
 from src.data.config import get_alpaca_api_key, get_alpaca_secret_key, get_anthropic_api_key
-from src.execution.alpaca import get_account, get_latest_quote, get_open_positions, place_market_order, place_stop_order
+from src.execution.alpaca import (
+    get_account,
+    get_latest_quote,
+    get_open_positions,
+    is_market_open,
+    place_market_order,
+    place_stop_order,
+)
 from src.execution.risk import check_daily_loss, check_pre_trade, is_halted, set_halt
 from src.execution.sizing import compute_position_size
 from src.llm.agreement import resolve_action
@@ -90,11 +97,23 @@ alpaca_key    = get_alpaca_api_key()
 alpaca_secret = get_alpaca_secret_key()
 
 # COMMAND ----------
-# Pre-flight: halt check and portfolio snapshot
+# Pre-flight: halt check, market clock check, and portfolio snapshot
 
 if is_halted():
     print("Trading is HALTED — manual clearance required. Exiting.")
     dbutils.notebook.exit("halted")
+
+# Market holidays are not encoded in the workflow cron — check the Alpaca
+# clock so orders are never queued against a closed market (they would fill
+# at the next open, far from the prices the decision was based on).
+if not is_market_open(alpaca_key, alpaca_secret):
+    print("Market is closed (holiday or off-hours) — skipping today's PENDING decisions.")
+    spark.sql(f"""
+        UPDATE {CATALOG}.{SCHEMA}.decisions
+        SET action_taken = 'SKIP', skip_reason = 'market closed'
+        WHERE action_taken = 'PENDING' AND DATE(timestamp) = '{TODAY}'
+    """)
+    dbutils.notebook.exit("market closed")
 
 account          = get_account(alpaca_key, alpaca_secret)
 portfolio_value  = float(account["portfolio_value"])
@@ -106,7 +125,10 @@ if halt_check["halt"]:
     set_halt(halt_check["reason"])
     dbutils.notebook.exit(f"halted: {halt_check['reason']}")
 
-print(f"Portfolio: ${portfolio_value:,.2f} | Open positions: {len(open_positions)} | Start of day: ${start_of_day_val:,.2f}")
+print(
+    f"Portfolio: ${portfolio_value:,.2f} | Open positions: {len(open_positions)} "
+    f"| Start of day: ${start_of_day_val:,.2f}"
+)
 
 # COMMAND ----------
 # Call Claude for each PENDING decision
@@ -177,7 +199,10 @@ for row in pending:
                 place_market_order(ticker, resolution["action_taken"], sizing["qty"], alpaca_key, alpaca_secret)
                 if resolution["action_taken"] == "BUY" and stop_loss_price:
                     place_stop_order(ticker, sizing["qty"], stop_loss_price, alpaca_key, alpaca_secret)
-                print(f"  Executed: {resolution['action_taken']} {sizing['qty']} shares @ ~${entry_price:.2f}, stop ${stop_loss_price}")
+                print(
+                    f"  Executed: {resolution['action_taken']} {sizing['qty']} shares "
+                    f"@ ~${entry_price:.2f}, stop ${stop_loss_price}"
+                )
             except Exception as exc:
                 print(f"  Order failed: {exc}")
                 resolution["action_taken"] = "SKIP"
