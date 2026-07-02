@@ -13,12 +13,13 @@ sys.path.insert(0, "/Workspace/Users/bryankdonnelly@comcast.net/ai-trading-bot")
 # COMMAND ----------
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from src.signals.quant import compute_quant_signal
 
 CATALOG = "bootcamp_students"
 SCHEMA  = "trading_bd"
+TODAY   = date.today()
 
 # COMMAND ----------
 
@@ -69,6 +70,34 @@ for row in context:
 print(f"\nQuant signals: {len(decisions)} non-HOLD ({len(context) - len(decisions)} HOLD)")
 for d in decisions:
     print(f"  {d['ticker']}: {d['quant_action']} ({d['quant_confidence']:.0%} conf) — {d['quant_reason']}")
+
+# COMMAND ----------
+# Idempotent write. A re-run must not stack duplicate PENDING rows —
+# decision_loop would process each copy and could double-buy, because its
+# duplicate-holding check runs against a pre-flight positions snapshot that
+# does not see orders placed moments earlier in the same run.
+#   1. Replace today's unprocessed PENDING rows instead of appending to them.
+#   2. Never re-open a ticker that already has a resolved decision today
+#      (a full-job re-run after decision_loop succeeded must be a no-op).
+
+spark.sql(f"""
+    DELETE FROM {CATALOG}.{SCHEMA}.decisions
+    WHERE action_taken = 'PENDING' AND DATE(timestamp) = DATE('{TODAY}')
+""")
+
+already_decided = {
+    r.ticker
+    for r in spark.sql(f"""
+        SELECT DISTINCT ticker FROM {CATALOG}.{SCHEMA}.decisions
+        WHERE DATE(timestamp) = DATE('{TODAY}')
+    """).collect()
+}
+
+if already_decided:
+    skipped_rerun = [d["ticker"] for d in decisions if d["ticker"] in already_decided]
+    decisions = [d for d in decisions if d["ticker"] not in already_decided]
+    if skipped_rerun:
+        print(f"Skipping {len(skipped_rerun)} tickers already decided today: {', '.join(skipped_rerun)}")
 
 # COMMAND ----------
 
