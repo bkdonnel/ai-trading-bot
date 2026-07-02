@@ -71,6 +71,25 @@ Exit data is written back to Delta by `jobs/reconcile_exits.py` — a nightly Da
 `ALPACA_API_KEY`, `ALPACA_SECRET_KEY`, `POLYGON_API_KEY`, `ANTHROPIC_API_KEY`
 Optional: `FINBERT_ENDPOINT_URL`, `FINBERT_TOKEN`
 
+## Dashboards
+Lakeview dashboards are defined as code in `dashboards/*.lvdash.json` and deploy through the normal push-then-pull Git Folder flow (no PAT means no API-based dashboard creation). Open the file in the workspace tree to get a draft dashboard; publish from there. `dashboards/trading_performance.lvdash.json` reads only the `decisions` and `candidates` tables.
+
+## Idempotency Conventions
+All scheduled jobs must be safe to re-run same-day (Workflow retries, manual repairs):
+- Daily writers use delete-today-then-append: `tier2_screen`, `tier3_triggers`, `run_quant_signals`
+- `run_quant_signals` additionally skips tickers that already have a resolved decision today — a full-job re-run after a successful morning must be a no-op, because `decision_loop`'s duplicate-holding check uses a pre-flight positions snapshot and cannot catch a second PENDING copy processed in the same run
+- `decision_loop` only reads `action_taken = 'PENDING'` rows and resolves everything it touches
+- Do not add blind appends to any job that can run more than once per day
+
+## Decision Loop Guards
+`decision_loop.py` pre-flight checks, in order: halt flag, Alpaca clock (`is_market_open`), daily-loss check. On market holidays (the cron only knows weekdays) it resolves today's PENDING rows to SKIP with `skip_reason = 'market closed'` — these rows legitimately have no `llm_verdict`.
+
+## Trades Table
+`decision_loop.py` appends each placed order (market buy + GTC stop, same `decision_id`) to `trades` at submission time via `order_to_trade_record` in `src/execution/alpaca.py`. `filled_price`/`filled_at` are usually null at write time — market orders fill after the response returns. Sell fills flow into `decisions` via nightly `reconcile_exits.py`; `trades` is the submission audit log, not the fill record.
+
+## Table Verification
+`jobs/verify_tables.py` is a manual (not scheduled) notebook with 13 shakedown checks across three layers: nightly tables, decision loop, exit lifecycle. For offending-rows checks, empty result = pass. FinBERT is not deployed, so `news.sentiment_score` is expected to be all NULL — the DLT scorer writes nulls gracefully when the `finbert_endpoint_url` secret is absent.
+
 ## Halt Flag
 
 Trading halt state is persisted as a plain file — not a Delta table — so it is readable by both the Databricks job and future external processes without requiring a PAT:
