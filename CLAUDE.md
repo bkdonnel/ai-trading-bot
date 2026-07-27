@@ -84,6 +84,12 @@ All scheduled jobs must be safe to re-run same-day (Workflow retries, manual rep
 ## Decision Loop Guards
 `decision_loop.py` pre-flight checks, in order: halt flag, Alpaca clock (`is_market_open`), daily-loss check. On market holidays (the cron only knows weekdays) it resolves today's PENDING rows to SKIP with `skip_reason = 'market closed'` — these rows legitimately have no `llm_verdict`.
 
+## Workflow Monitoring
+Databricks Workflow triggers can be paused from the UI independently of any code or schedule-config change, and this account tier has no accessible audit log to determine who/when/why it happened. A paused trigger produces no error anywhere — the job simply stops appearing in run history, with the code and cron config looking correct the whole time. Periodically check Workflows → `<job>` → run history for gaps; don't assume a schedule is still firing just because nothing looks wrong in the repo.
+
+## Backfilling Decisions
+`decision_loop.py` is a live execution system, not replayable. Alpaca fills orders at the current market price, and the LLM's context (news, tier2/3 candidates) can't be reconstructed as it looked on a past date. A gap in the `decisions` table (e.g. from a paused Workflow trigger) cannot be backfilled — treat it as lost data and let the loop continue forward. A backtest mode (replaying historical `price_bars`/`news` through the same quant+LLM logic without placing real orders) would be a separate, non-trivial feature; not built.
+
 ## Trades Table
 `decision_loop.py` appends each placed order (market buy + GTC stop, same `decision_id`) to `trades` at submission time via `order_to_trade_record` in `src/execution/alpaca.py`. `filled_price`/`filled_at` are usually null at write time — market orders fill after the response returns. Sell fills flow into `decisions` via nightly `reconcile_exits.py`; `trades` is the submission audit log, not the fill record.
 

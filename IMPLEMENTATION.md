@@ -733,6 +733,7 @@ Build and validate each phase before moving to the next.
 - [x] Databricks SQL dashboard (`dashboards/trading_performance.lvdash.json`, 2026-07-02) — Lakeview dashboard as code, deployed via the normal push-then-pull Git Folder flow; KPI counters, verdict mix, signal-combination performance, open positions, skip reasons, decisions/candidates charts. Confirmed rendering in workspace. Performance widgets populate once trades close
 - [ ] Genie setup for natural language performance queries
 - [ ] Weekly review workflow in notebook
+- **Track record check (2026-07-27):** `decisions` table had only 2 real `BUY`/`UNCERTAIN` decisions (2026-07-02 to 07-13), both still open, plus 3 orphaned test rows from 2026-06-22/23 predating the environment fix (not yet cleaned up). Discovered `trading-decision-loop`'s Workflow trigger had been silently paused since 2026-07-13 — no error anywhere, just a 14-day gap in run history. Unpaused; root cause unknown (no audit log available on this account tier). Decided not to backfill the gap — see CLAUDE.md "Backfilling Decisions"
 
 ### Phase 6 — Live Trading
 - [ ] Paper trade 50+ decisions, validate all metrics
